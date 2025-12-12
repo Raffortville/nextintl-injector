@@ -1,0 +1,25 @@
+import path from 'path';
+import { pathToFileURL } from 'url';
+import { I18nInjectorConfig } from './config';
+
+export async function loadUserConfig(): Promise<I18nInjectorConfig> {
+	const configPath = path.resolve(process.cwd(), 'nextintl.config.ts');
+
+	try {
+		const mod = await import(pathToFileURL(configPath).href);
+
+		if (!mod.default) {
+			console.warn(
+				'[nextintl-injector] nextintl.config.ts found but missing default export.'
+			);
+			throw new Error('Missing default export');
+		}
+
+		return {
+			...mod.default,
+		};
+	} catch (e) {
+		console.warn('[nextintl-injector] No nextintl.config.ts found.');
+		throw e;
+	}
+}

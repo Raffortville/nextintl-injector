@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { apply, messages } from './messages';
+import { generate } from './generate-messages';
 
 const program = new Command();
 
@@ -10,18 +10,37 @@ program
 	.description('A static text extractor and injector for Next.js + next-intl.')
 	.version('0.1.0');
 
+// ------------------------
+// Messages command
+// ------------------------
 program
-	.command('messages')
-	.description('Affiche un message de bienvenue')
-	.action(() => {
-		messages();
+	.command('generate')
+	.description('Generate internationalization messages.')
+	.action(async () => {
+		try {
+			await generate();
+		} catch (err) {
+			console.error('❌ Failed to execute generate command:', err);
+			process.exit(1);
+		}
 	});
 
-program
-	.command('apply')
-	.description('Affiche un message de bienvenue')
-	.action(() => {
-		apply();
-	});
+// ------------------------
+// Top-level error handling
+// ------------------------
+(async () => {
+	try {
+		await program.parseAsync(process.argv);
+	} catch (err) {
+		console.error('❌ CLI execution failed:', err);
+		process.exit(1);
+	}
+})();
 
-program.parse();
+// ------------------------
+// Optional: catch unhandled rejections
+// ------------------------
+process.on('unhandledRejection', (reason) => {
+	console.error('❌ Unhandled rejection:', reason);
+	process.exit(1);
+});
