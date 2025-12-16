@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { generate } from './generate-messages';
+import { initGenerateMessages } from './generate-messages';
 
 const program = new Command();
 
@@ -18,7 +18,7 @@ program
 	.description('Generate internationalization messages.')
 	.action(async () => {
 		try {
-			await generate();
+			await initGenerateMessages();
 		} catch (err) {
 			console.error('❌ Failed to execute generate command:', err);
 			process.exit(1);

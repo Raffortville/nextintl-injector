@@ -4,7 +4,7 @@
   "description": "A static text extractor and injector for Next.js + next-intl.",
   "type": "module",
   "bin": {
-    "nextintl-injector": "./bin/nextintl-injector.js"
+    "nextintl-injector": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "exports": {
@@ -15,11 +15,10 @@
   },
   "types": "./dist/index.d.ts",
   "files": [
-    "dist",
-    "bin"
+    "dist"
   ],
   "scripts": {
-    "build": "tsup src --format esm --dts --clean",
+    "build": "tsup",
     "dev": "tsup src --format esm --dts --watch",
     "prepare": "pnpm run build",
     "format": "prettier --write 'src/**/*.ts'"
@@ -29,6 +28,10 @@
   "license": "ISC",
   "packageManager": "pnpm@10.24.0",
   "devDependencies": {
+    "@babel/parser": "^7.28.5",
+    "@babel/traverse": "^7.28.5",
+    "@babel/types": "^7.28.5",
+    "@types/babel__traverse": "^7.28.0",
     "@types/node": "^25.0.1",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.1",
