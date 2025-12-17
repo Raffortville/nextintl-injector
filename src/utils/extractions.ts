@@ -1,6 +1,6 @@
-import { RulesKey } from '../config';
-import { RULES_TO_APPLY } from './constants';
-import { normalizeJSXText } from './misc';
+import { RulesKey } from '../config.js';
+import { RULES_TO_APPLY } from './constants.js';
+import { normalizeJSXText } from './misc.js';
 
 const RULES: Record<RulesKey, (raw: string) => boolean> = {
 	// 🔤 Ignore short uppercase texts (OK, ID)

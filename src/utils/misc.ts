@@ -1,5 +1,5 @@
 import path from 'path';
-import { SCRIPT_ROOT_DIR } from './constants';
+import { SCRIPT_ROOT_DIR } from './constants.js';
 
 function getGeneratedMessageOutputPathFile(locale: string): string {
 	return path.join(SCRIPT_ROOT_DIR, 'generated-messages', `${locale}.json`);

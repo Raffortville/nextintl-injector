@@ -1,5 +1,5 @@
 import path from 'path';
-import { RulesKey } from '../config';
+import { RulesKey } from '../config.js';
 
 const SCRIPT_ROOT_DIR = 'static-text-detector';
 const REPORT_OUTPUT_PATH = path.join(

@@ -1,14 +1,18 @@
-// import traverse from '@babel/traverse';
-import { I18nInjectorConfig } from './config';
-import { loadUserConfig } from './load-user-config';
-import { setFileToAST } from './utils/ast';
+import { I18nInjectorConfig } from './config.js';
+import { loadUserConfig } from './load-user-config.js';
+import { setFileToAST } from './utils/ast.js';
 // import { getGeneratedMessageOutputPathFile } from './utils/misc';
 import fs from 'fs';
 import path from 'path';
-// import {
-// 	extractTextFromJSXAttributeValue,
-// 	extractTextFromJSXText,
-// } from './utils/extractions';
+import {
+	extractTextFromJSXAttributeValue,
+	extractTextFromJSXText,
+} from './utils/extractions.js';
+import traverseModule, { type NodePath } from '@babel/traverse';
+import type * as t from '@babel/types';
+
+const traverse =
+	(traverseModule as any).default ?? (traverseModule as typeof traverseModule);
 
 // ----------------- GET CONFIG -----------------
 let nextintlConfig: I18nInjectorConfig | null = null;
@@ -34,34 +38,32 @@ function extractTextsFromAST(filePath: string) {
 		console.warn('❌ No AST generated for', filePath);
 		return;
 	}
-	console.log('✅ AST generated for', filePath);
 
-	// traverse(ast, {
-	// 	JSXText(path) {
-	// 		const text = extractTextFromJSXText(
-	// 			path.node.value,
-	// 			config.ignoreWords,
-	// 			config.rulesToSkip || []
-	// 		);
-	// 		console.log('Extracted text:', text);
-	// 	},
-	// 	JSXAttribute(path) {
-	// 		const attrValue = path.node.value;
+	traverse(ast, {
+		JSXText(path: NodePath<t.JSXText>) {
+			const text = extractTextFromJSXText(
+				path.node.value,
+				config.ignoreWords,
+				config.rulesToSkip || []
+			);
+			console.log('Extracted text:', text);
+		},
+		JSXAttribute(path: NodePath<t.JSXAttribute>) {
+			const attrValue = path.node.value;
 
-	// 		if (!attrValue || attrValue.type !== 'StringLiteral') return;
-	// 		const attrName = path.node.name.name;
-	// 		if (typeof attrName !== 'string') return;
-	// 		if (!config.jsxAttributes.includes(attrName)) return;
+			if (!attrValue || attrValue.type !== 'StringLiteral') return;
+			const attrName = path.node.name.name;
+			if (typeof attrName !== 'string') return;
+			if (!config.jsxAttributes.includes(attrName)) return;
 
-	// 		const text = extractTextFromJSXAttributeValue(
-	// 			attrValue.value,
-	// 			config.ignoreWords,
-	// 			config.rulesToSkip || []
-	// 		);
-	// 		console.log('Extracted attribute text:', text);
-	// 	},
-	// });
-	// Placeholder for AST extraction logic
+			const text = extractTextFromJSXAttributeValue(
+				attrValue.value,
+				config.ignoreWords,
+				config.rulesToSkip || []
+			);
+			console.log('Extracted attribute text:', text);
+		},
+	});
 }
 
 // ----------------- SCAN THROUGH PROJECT -----------------

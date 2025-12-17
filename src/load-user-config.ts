@@ -1,6 +1,6 @@
 import path from 'path';
 import { pathToFileURL } from 'url';
-import { I18nInjectorConfig } from './config';
+import { I18nInjectorConfig } from './config.js';
 
 export async function loadUserConfig(): Promise<I18nInjectorConfig> {
 	const configPath = path.resolve(process.cwd(), 'nextintl.config.ts');

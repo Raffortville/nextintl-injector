@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { initGenerateMessages } from './generate-messages';
+import { initGenerateMessages } from './generate-messages.js';
 
 const program = new Command();
 
