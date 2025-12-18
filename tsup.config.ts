@@ -12,6 +12,7 @@ export default defineConfig({
 		'src/utils/extractions.ts',
 		'src/utils/constants.ts',
 		'src/apply-translations.ts',
+		'src/merge-messages.ts',
 	],
 	format: ['esm'],
 	clean: true,

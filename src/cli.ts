@@ -32,9 +32,10 @@ program
 program
 	.command('apply')
 	.description('Apply translations to the project.')
-	.action(async () => {
+	.option('--dry, --dry', 'Run in dry mode without making changes.', false)
+	.action(async (options) => {
 		try {
-			await initApplyTranslations();
+			await initApplyTranslations(options);
 		} catch (err) {
 			console.error('❌ Failed to execute apply command:', err);
 			process.exit(1);

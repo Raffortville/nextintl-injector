@@ -1,3 +1,5 @@
+import { loadUserConfig } from './load-user-config.js';
+
 export type RulesKey =
 	| 'short-uppercase'
 	| 'numbers'
@@ -19,3 +21,28 @@ export interface I18nInjectorConfig {
 	jsxAttributes: string[]; // attributes to check
 	rulesToSkip: RulesKey[]; // rules that should not be applied
 }
+
+class ConfigContext {
+	private config: I18nInjectorConfig | null = null;
+
+	async init() {
+		if (this.config) return;
+
+		this.config = {
+			...(await loadUserConfig()),
+		};
+	}
+
+	get(): I18nInjectorConfig {
+		if (!this.config) {
+			throw new Error('nextintl config file not loaded.');
+		}
+		return this.config;
+	}
+
+	isInitialized(): boolean {
+		return this.config !== null;
+	}
+}
+
+export const configContext = new ConfigContext();

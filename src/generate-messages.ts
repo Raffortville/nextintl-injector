@@ -1,5 +1,4 @@
-import { I18nInjectorConfig } from './config.js';
-import { loadUserConfig } from './load-user-config.js';
+import { configContext, I18nInjectorConfig } from './config.js';
 import { setFileToAST } from './utils/ast.js';
 import chalk from 'chalk';
 
@@ -28,29 +27,13 @@ const scan_extractions: Record<
 	Record<string, { static_text: string; path: string }>
 > = {};
 
-// ----------------- GET CONFIG -----------------
-let nextintlConfig: I18nInjectorConfig | null = null;
-const initConfigUser = async () => {
-	const configUser = await loadUserConfig();
-	nextintlConfig = {
-		...configUser,
-	};
-};
-function getConfig(): I18nInjectorConfig {
-	if (!nextintlConfig) {
-		throw new Error('nextintl config file not loaded.');
-	}
-	return nextintlConfig;
-}
-
 // ----------------- REPORT EXTRACTED TEXTS -----------------
 function setReportExtractedTexts(filePath: string, texts: Set<string>) {
-	const CONFIG = getConfig();
 	if (texts.size === 0) return;
+	const config = configContext.get();
 
 	const fileFolderKey = getLastFileAndFolder(filePath);
-	const pathRelative = path.relative(CONFIG.projectRootDir, filePath);
-
+	const pathRelative = path.relative(config.projectRootDir, filePath);
 	generatedMessages[fileFolderKey] = {};
 	scan_extractions[fileFolderKey] = {};
 
@@ -73,13 +56,12 @@ function setReportExtractedTexts(filePath: string, texts: Set<string>) {
 
 // ----------------- EXTRACT TEXTS FROM AST -----------------
 function extractTextsFromAST(filePath: string) {
-	const config = getConfig();
-
 	const ast = setFileToAST(filePath);
 	if (!ast) {
 		console.warn('❌ No AST generated for', filePath);
 		return;
 	}
+	const config = configContext.get();
 	const fileTexts = new Set<string>();
 
 	traverse(ast, {
@@ -117,8 +99,7 @@ function extractTextsFromAST(filePath: string) {
 
 // ----------------- SCAN THROUGH PROJECT -----------------
 async function scanDirectory(dir: string) {
-	const config = getConfig();
-
+	const config = configContext.get();
 	for (const entry of fs.readdirSync(dir)) {
 		if (config.ignoreDirs.includes(entry)) continue;
 
@@ -141,13 +122,12 @@ async function scanDirectory(dir: string) {
 
 // ----------------- EXECUTION -----------------
 export async function initGenerateMessages() {
-	if (!nextintlConfig) {
-		await initConfigUser();
-	}
+	await configContext.init();
 
-	if (!nextintlConfig) {
+	if (!configContext.isInitialized()) {
 		throw new Error('Configuration not loaded.');
 	}
+	const nextintlConfig: I18nInjectorConfig = configContext.get();
 
 	try {
 		await scanDirectory(nextintlConfig.projectRootDir);
