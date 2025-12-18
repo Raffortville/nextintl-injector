@@ -11,6 +11,7 @@ export default defineConfig({
 		'src/utils/ast.ts',
 		'src/utils/extractions.ts',
 		'src/utils/constants.ts',
+		'src/apply-translations.ts',
 	],
 	format: ['esm'],
 	clean: true,

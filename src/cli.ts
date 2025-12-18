@@ -2,6 +2,11 @@
 
 import { Command } from 'commander';
 import { initGenerateMessages } from './generate-messages.js';
+import { initApplyTranslations } from './apply-translations.js';
+
+// ------------------------
+// CLI Setup
+// ------------------------
 
 const program = new Command();
 
@@ -10,9 +15,7 @@ program
 	.description('A static text extractor and injector for Next.js + next-intl.')
 	.version('0.1.0');
 
-// ------------------------
-// Messages command
-// ------------------------
+// ----------------- GENERATE COMMAND -----------------
 program
 	.command('generate')
 	.description('Generate internationalization messages.')
@@ -21,6 +24,19 @@ program
 			await initGenerateMessages();
 		} catch (err) {
 			console.error('❌ Failed to execute generate command:', err);
+			process.exit(1);
+		}
+	});
+
+// ----------------- APPLY COMMAND -----------------
+program
+	.command('apply')
+	.description('Apply translations to the project.')
+	.action(async () => {
+		try {
+			await initApplyTranslations();
+		} catch (err) {
+			console.error('❌ Failed to execute apply command:', err);
 			process.exit(1);
 		}
 	});
