@@ -1,6 +1,17 @@
 import { RulesKey } from '../config.js';
 import { RULES_TO_APPLY } from './constants.js';
 import { normalizeJSXText } from './misc.js';
+import path from 'path';
+
+export function getLastFileAndFolder(relativePath: string): string {
+	const dir = path.dirname(relativePath); // "src/app"
+	const file = path.basename(relativePath); // "page.tsx"
+	const fileNoExt = file.replace(path.extname(file), ''); // "page"
+
+	const lastFolder = path.basename(dir); // "app"
+
+	return `${lastFolder}_${fileNoExt}`;
+}
 
 const RULES: Record<RulesKey, (raw: string) => boolean> = {
 	// 🔤 Ignore short uppercase texts (OK, ID)
@@ -66,11 +77,6 @@ export function extractTextFromJSXText(
 	const normalizedText = normalizeJSXText(jsxText);
 	if (!normalizedText) return;
 	return normalizedText;
-}
-
-interface JSXAttributeNode {
-	name: { name: string };
-	value: { type: string; value: string } | null;
 }
 
 export function extractTextFromJSXAttributeValue(

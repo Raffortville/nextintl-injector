@@ -1,18 +1,32 @@
 import { I18nInjectorConfig } from './config.js';
 import { loadUserConfig } from './load-user-config.js';
 import { setFileToAST } from './utils/ast.js';
-// import { getGeneratedMessageOutputPathFile } from './utils/misc';
+import chalk from 'chalk';
+
 import fs from 'fs';
 import path from 'path';
 import {
 	extractTextFromJSXAttributeValue,
 	extractTextFromJSXText,
+	getLastFileAndFolder,
 } from './utils/extractions.js';
 import traverseModule, { type NodePath } from '@babel/traverse';
 import type * as t from '@babel/types';
+import {
+	textKeyGenerator,
+	validateI18n,
+	getGeneratedMessageOutputPathFile,
+} from './utils/misc.js';
 
 const traverse =
 	(traverseModule as any).default ?? (traverseModule as typeof traverseModule);
+
+// ----------------- EXTRACTED TEXTS STORAGE -----------------
+const generatedMessages: Record<string, Record<string, string>> = {};
+const scan_extractions: Record<
+	string,
+	Record<string, { static_text: string; path: string }>
+> = {};
 
 // ----------------- GET CONFIG -----------------
 let nextintlConfig: I18nInjectorConfig | null = null;
@@ -29,6 +43,34 @@ function getConfig(): I18nInjectorConfig {
 	return nextintlConfig;
 }
 
+// ----------------- REPORT EXTRACTED TEXTS -----------------
+function setReportExtractedTexts(filePath: string, texts: Set<string>) {
+	const CONFIG = getConfig();
+	if (texts.size === 0) return;
+
+	const fileFolderKey = getLastFileAndFolder(filePath);
+	const pathRelative = path.relative(CONFIG.projectRootDir, filePath);
+
+	generatedMessages[fileFolderKey] = {};
+	scan_extractions[fileFolderKey] = {};
+
+	for (const text of texts) {
+		const textKey = textKeyGenerator(text);
+		scan_extractions[fileFolderKey][textKey] = {
+			static_text: text,
+			path: pathRelative,
+		};
+		generatedMessages[fileFolderKey][textKey] = text;
+	}
+
+	const validated = validateI18n(generatedMessages[fileFolderKey]);
+
+	if (!validated) {
+		console.warn('❌ Validation error for texts in', filePath);
+		return; // pas de crash
+	}
+}
+
 // ----------------- EXTRACT TEXTS FROM AST -----------------
 function extractTextsFromAST(filePath: string) {
 	const config = getConfig();
@@ -38,6 +80,7 @@ function extractTextsFromAST(filePath: string) {
 		console.warn('❌ No AST generated for', filePath);
 		return;
 	}
+	const fileTexts = new Set<string>();
 
 	traverse(ast, {
 		JSXText(path: NodePath<t.JSXText>) {
@@ -46,7 +89,9 @@ function extractTextsFromAST(filePath: string) {
 				config.ignoreWords,
 				config.rulesToSkip || []
 			);
-			console.log('Extracted text:', text);
+			if (text) {
+				fileTexts.add(text);
+			}
 		},
 		JSXAttribute(path: NodePath<t.JSXAttribute>) {
 			const attrValue = path.node.value;
@@ -61,9 +106,13 @@ function extractTextsFromAST(filePath: string) {
 				config.ignoreWords,
 				config.rulesToSkip || []
 			);
-			console.log('Extracted attribute text:', text);
+			if (text) {
+				fileTexts.add(text);
+			}
 		},
 	});
+
+	setReportExtractedTexts(filePath, fileTexts);
 }
 
 // ----------------- SCAN THROUGH PROJECT -----------------
@@ -100,13 +149,32 @@ export async function initGenerateMessages() {
 		throw new Error('Configuration not loaded.');
 	}
 
-	await scanDirectory(nextintlConfig.projectRootDir);
+	try {
+		await scanDirectory(nextintlConfig.projectRootDir);
 
-	// const outputPath = getGeneratedMessageOutputPathFile(
-	// 	nextintlConfig.defaultLocale
-	// );
+		const messagesOutputPath = getGeneratedMessageOutputPathFile(
+			nextintlConfig.defaultLocale
+		);
 
-	console.log('🔍 Start generating messages');
+		fs.mkdirSync(path.dirname(messagesOutputPath), { recursive: true });
+
+		fs.writeFileSync(
+			messagesOutputPath,
+			JSON.stringify(generatedMessages, null, 2),
+			'utf-8'
+		);
+
+		console.log(
+			'✅ Generated messages written to',
+			`${chalk.underline.blueBright(messagesOutputPath)}`
+		);
+		console.log(
+			`${chalk.greenBright('✔')} Total texts extracted:`,
+			scan_extractions
+		);
+	} catch (error) {
+		console.error('❌ Error during message generation:', error);
+	}
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
