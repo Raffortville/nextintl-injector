@@ -13,6 +13,8 @@ export default defineConfig({
 		'src/utils/constants.ts',
 		'src/apply-translations.ts',
 		'src/merge-messages.ts',
+		'src/load-generated-messages.ts',
+		'src/utils/translations.ts',
 	],
 	format: ['esm'],
 	clean: true,

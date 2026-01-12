@@ -1,6 +1,8 @@
 import path from 'path';
 import { SCRIPT_ROOT_DIR } from './constants.js';
 import { z } from 'zod';
+import * as t from '@babel/types';
+import parser from '@babel/parser';
 
 function getGeneratedMessageOutputPathFile(locale: string): string {
 	return path.join(SCRIPT_ROOT_DIR, `${locale}.json`);
@@ -52,9 +54,23 @@ function validateI18n(data: unknown): I18nObject | null {
 	return result.success ? result.data : null;
 }
 
+function toSafeIdentifier(namespace: string): string {
+	return 't_' + namespace.replace(/[^a-zA-Z0-9]/g, '_');
+}
+
+function parseStatement(code: string): t.Statement {
+	const ast = parser.parse(code, {
+		sourceType: 'module',
+		plugins: ['jsx', 'typescript'],
+	});
+	return ast.program.body[0];
+}
+
 export {
 	getGeneratedMessageOutputPathFile,
 	normalizeJSXText,
+	toSafeIdentifier,
+	parseStatement,
 	textKeyGenerator,
 	validateI18n,
 };

@@ -1,33 +1,9 @@
 import { configContext } from './config.js';
 import path from 'path';
 import fs from 'fs';
-import {
-	getGeneratedMessageOutputPathFile,
-	I18nObject,
-	validateI18n,
-} from './utils/misc.js';
+import { I18nObject, validateI18n } from './utils/misc.js';
 import chalk from 'chalk';
-
-// ----------------- LOAD GENERATED MESSAGES -----------------
-function loadGeneratedMessages() {
-	const config = configContext.get();
-	const messagesOutputPath = getGeneratedMessageOutputPathFile(
-		config.defaultLocale
-	);
-	if (!fs.existsSync(messagesOutputPath)) {
-		console.warn('❌ Messages file does not exist:', messagesOutputPath);
-		return {};
-	}
-	const raw = fs.readFileSync(messagesOutputPath, 'utf-8');
-	const existingMessages = JSON.parse(raw);
-	const validatedExistingMessages = validateI18n(existingMessages);
-
-	if (validatedExistingMessages === null) {
-		console.error(`❌ Invalid i18n format in ${messagesOutputPath}`);
-		process.exit(1);
-	}
-	return existingMessages;
-}
+import { loadGeneratedMessages } from './load-generated-messages.js';
 
 // ----------------- MERGE AND WRITE MESSAGES TO DEFAULT LOCALE FILE -----------------
 function mergeAndWriteMessages(defaultMessagesFile: string) {
