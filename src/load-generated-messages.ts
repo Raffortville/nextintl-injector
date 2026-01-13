@@ -35,4 +35,19 @@ function loadGeneratedMessages() {
 	return validatedExistingMessages;
 }
 
-export { loadGeneratedMessages };
+// ----------------- DELETE GENERATED MESSAGES FILE -----------------
+function deleteGeneratedMessagesFile() {
+	const config = configContext.get();
+	const messagesOutputPath = getGeneratedMessageOutputPathFile(
+		config.defaultLocale
+	);
+	if (fs.existsSync(messagesOutputPath)) {
+		fs.unlinkSync(messagesOutputPath);
+		console.log(
+			'🗑️',
+			chalk.green(`Deleted generated messages file at ${messagesOutputPath}`)
+		);
+	}
+}
+
+export { loadGeneratedMessages, deleteGeneratedMessagesFile };

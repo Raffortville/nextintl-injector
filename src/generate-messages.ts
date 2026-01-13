@@ -148,9 +148,14 @@ export async function initGenerateMessages() {
 			'✅ Generated messages written to',
 			`${chalk.underline.blueBright(messagesOutputPath)}`
 		);
+
+		const totalExtractions = Object.values(scan_extractions).reduce(
+			(sum, group) => sum + Object.keys(group).length,
+			0
+		);
 		console.log(
 			`${chalk.greenBright('✔')} Total texts extracted:`,
-			scan_extractions
+			totalExtractions
 		);
 	} catch (error) {
 		console.error('❌ Error during message generation:', error);

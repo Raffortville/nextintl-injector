@@ -8,7 +8,10 @@ import {
 	extractTextFromJSXText,
 	getLastFileAndFolder,
 } from './utils/extractions.js';
-import { loadGeneratedMessages } from './load-generated-messages.js';
+import {
+	deleteGeneratedMessagesFile,
+	loadGeneratedMessages,
+} from './load-generated-messages.js';
 import { parseStatement, toSafeIdentifier } from './utils/misc.js';
 import traverseModule, { type NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
@@ -32,9 +35,17 @@ const generate =
 const traverse =
 	(traverseModule as any).default ?? (traverseModule as typeof traverseModule);
 
-export interface ApplyOptions {
+interface ApplyOptions {
 	dry: boolean;
 }
+interface ApplyResult {
+	scannedFiles: number;
+	modifiedFiles: number;
+	skippedFiles: number;
+	errors: number;
+}
+
+// ----------------- GLOBALS -----------------
 let isDryMode = false;
 
 // ----------------- ENSURE USE TRANSLATIONS IS USED -----------------
@@ -280,37 +291,61 @@ function replaceStaticText(filePath: string) {
 }
 
 // ----------------- SCAN THROUGH PROJECT -----------------
-async function scanDirectory(dir: string) {
+async function scanDirectory(dir: string): Promise<ApplyResult> {
 	const config = configContext.get();
+
+	const localResult: ApplyResult = {
+		scannedFiles: 0,
+		modifiedFiles: 0,
+		skippedFiles: 0,
+		errors: 0,
+	};
+
 	for (const entry of fs.readdirSync(dir)) {
 		if (config.ignoreDirs.includes(entry)) continue;
 
 		const full = path.join(dir, entry);
-		const isDir = await fs.promises
-			.stat(full)
-			.then((stat) => stat.isDirectory());
 
-		if (isDir) {
-			await scanDirectory(full);
+		let stat;
+		try {
+			stat = await fs.promises.stat(full);
+		} catch {
+			localResult.errors++;
+			continue;
+		}
+
+		if (stat.isDirectory()) {
+			const child = await scanDirectory(full);
+			localResult.scannedFiles += child.scannedFiles;
+			localResult.modifiedFiles += child.modifiedFiles;
+			localResult.skippedFiles += child.skippedFiles;
+			localResult.errors += child.errors;
 			continue;
 		}
 
 		const ext = path.extname(entry);
 		if (!config.validExtensions.includes(ext)) continue;
 
-		const newCode = replaceStaticText(full);
+		localResult.scannedFiles++;
 
+		const newCode = replaceStaticText(full);
 		if (!newCode) {
+			localResult.skippedFiles++;
 			continue;
 		}
 
-		if (isDryMode) {
-			console.log('    → CHANGES DETECTED (dry-run)');
-			return;
-		}
+		localResult.modifiedFiles++;
 
-		fs.writeFileSync(full, newCode, 'utf-8');
+		if (isDryMode) continue;
+
+		try {
+			fs.writeFileSync(full, newCode, 'utf-8');
+		} catch {
+			localResult.errors++;
+		}
 	}
+
+	return localResult;
 }
 
 // ----------------- EXECUTION -----------------
@@ -326,12 +361,25 @@ export async function initApplyTranslations(options: ApplyOptions) {
 	}
 	const nextintlConfig: I18nInjectorConfig = configContext.get();
 
-	try {
-		await scanDirectory(nextintlConfig.projectRootDir);
-		console.log(chalk.green('✅ Translations applied successfully.'));
-	} catch (error) {
-		console.error('Error scanning directory:', error);
+	const result = await scanDirectory(nextintlConfig.projectRootDir);
+
+	if (result.errors > 0) {
+		console.error(chalk.red(`❌ Completed with ${result.errors} error(s).`));
+		return;
 	}
+
+	if (result.modifiedFiles === 0) {
+		console.log(chalk.yellow('⚠️ No translatable content detected.'));
+		return;
+	}
+
+	console.log(
+		chalk.green(
+			`✅ Completed successfully. ${result.modifiedFiles} file(s) updated.`
+		)
+	);
+
+	deleteGeneratedMessagesFile();
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
