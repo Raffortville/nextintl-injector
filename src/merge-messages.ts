@@ -28,12 +28,6 @@ function mergeAndWriteMessages(defaultMessagesFile: string) {
 		JSON.stringify(mergedMessages, null, 2),
 		'utf-8'
 	);
-
-	console.log(
-		chalk.green(
-			`✅ Merged messages written to ${chalk.blueBright(defaultMessagesFile)}`
-		)
-	);
 }
 
 // ----------------- CREATE MESSAGE DIRECTORY AND DEFAULT LOCALE FILE IF MISSING -----------------
@@ -107,7 +101,14 @@ export async function initMergeMessages() {
 		throw new Error('Configuration not loaded.');
 	}
 	const nextintlConfig = configContext.get();
+
 	scanDirectory(nextintlConfig.projectRootDir);
+
+	console.log(
+		chalk.green(
+			`✅ Merged messages written to default locale files successfully.`
+		)
+	);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -17,9 +17,12 @@ import parser from '@babel/parser';
 import * as generatorModule from '@babel/generator';
 import chalk from 'chalk';
 import {
+	componentHasGetTranslations,
 	componentHasUseTranslationsHook,
 	componentUsesTranslation,
 	injectI18nImport,
+	isAsyncComponent,
+	isReactComponentFunction,
 } from './utils/i18n-inejection.js';
 
 const generate =
@@ -35,16 +38,14 @@ export interface ApplyOptions {
 let isDryMode = false;
 
 // ----------------- ENSURE USE TRANSLATIONS IS USED -----------------
-function ensureUseTranslation(ast: t.File, namespace: string): boolean {
-	injectI18nImport(ast);
+function ensureI18nAccess(ast: t.File, namespace: string): boolean {
 	const hookIdentifier = toSafeIdentifier(namespace);
 	let didInject = false;
 
 	traverse(ast, {
 		// ---------- Function Components ----------
 		FunctionDeclaration(path: NodePath<t.FunctionDeclaration>) {
-			const name = path.node.id?.name;
-			if (!name || name[0] !== name[0].toUpperCase()) return;
+			if (!isReactComponentFunction(path)) return;
 
 			const bodyPath = path.get('body');
 			if (!bodyPath.isBlockStatement()) return;
@@ -55,6 +56,26 @@ function ensureUseTranslation(ast: t.File, namespace: string): boolean {
 			);
 
 			if (!usesTranslation) return;
+			const isAsync = isAsyncComponent(path);
+
+			injectI18nImport(ast, isAsync ? 'async' : 'sync');
+
+			if (isAsync) {
+				const hasGetTranslations = componentHasGetTranslations(
+					bodyPath,
+					hookIdentifier,
+					namespace
+				);
+				if (hasGetTranslations) return;
+
+				bodyPath.unshiftContainer(
+					'body',
+					parseStatement(`
+						const ${hookIdentifier} = await getTranslations("${namespace}");`)
+				);
+				didInject = true;
+				return;
+			}
 
 			const hasHook = componentHasUseTranslationsHook(
 				bodyPath,
@@ -76,19 +97,7 @@ function ensureUseTranslation(ast: t.File, namespace: string): boolean {
 
 		// ---------- Arrow Function Components ----------
 		ArrowFunctionExpression(path: NodePath<t.ArrowFunctionExpression>) {
-			const parent = path.parentPath;
-
-			const componentName =
-				parent.isVariableDeclarator() && t.isIdentifier(parent.node.id)
-					? parent.node.id.name
-					: null;
-
-			const isComponent =
-				(componentName &&
-					componentName[0] === componentName[0].toUpperCase()) ||
-				parent.isExportDefaultDeclaration();
-
-			if (!isComponent) return;
+			if (!isReactComponentFunction(path)) return;
 
 			// ---- Block body ----
 			if (path.node.body.type === 'BlockStatement') {
@@ -99,6 +108,27 @@ function ensureUseTranslation(ast: t.File, namespace: string): boolean {
 					hookIdentifier
 				);
 				if (!usesTranslation) return;
+				const isAsync = isAsyncComponent(path);
+
+				injectI18nImport(ast, isAsync ? 'async' : 'sync');
+
+				if (isAsync) {
+					const hasGetTranslations = componentHasGetTranslations(
+						bodyPath,
+						hookIdentifier,
+						namespace
+					);
+					if (hasGetTranslations) return;
+
+					bodyPath.unshiftContainer(
+						'body',
+						parseStatement(
+							`const ${hookIdentifier} = await getTranslations("${namespace}");`
+						)
+					);
+					didInject = true;
+					return;
+				}
 
 				const hasHook = componentHasUseTranslationsHook(
 					bodyPath,
@@ -243,7 +273,7 @@ function replaceStaticText(filePath: string) {
 
 	if (!isModified || isDryMode) return null;
 
-	ensureUseTranslation(ast, fileFolderKey);
+	ensureI18nAccess(ast, fileFolderKey);
 
 	const { code: output } = generate(ast, { jsescOption: { minimal: true } });
 	return output;
@@ -280,10 +310,6 @@ async function scanDirectory(dir: string) {
 		}
 
 		fs.writeFileSync(full, newCode, 'utf-8');
-		console.log(
-			'✅',
-			`${chalk.underline.greenBright('Translations applied successfully')} `
-		);
 	}
 }
 
@@ -302,6 +328,7 @@ export async function initApplyTranslations(options: ApplyOptions) {
 
 	try {
 		await scanDirectory(nextintlConfig.projectRootDir);
+		console.log(chalk.green('✅ Translations applied successfully.'));
 	} catch (error) {
 		console.error('Error scanning directory:', error);
 	}

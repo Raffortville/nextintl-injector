@@ -5,6 +5,37 @@ import traverseModule, { type NodePath } from '@babel/traverse';
 const traverse =
 	(traverseModule as any).default ?? (traverseModule as typeof traverseModule);
 
+function isAsyncComponent(
+	path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression>
+): boolean {
+	return path.node.async === true;
+}
+
+function isReactComponentFunction(
+	path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression>
+): boolean {
+	// function Home() {}
+	if (path.isFunctionDeclaration()) {
+		const name = path.node.id?.name;
+		return !!name && name[0] === name[0].toUpperCase();
+	}
+
+	const parent = path.parentPath;
+
+	// const Home = () => {}
+	if (parent.isVariableDeclarator() && t.isIdentifier(parent.node.id)) {
+		return parent.node.id.name[0] === parent.node.id.name[0].toUpperCase();
+	}
+
+	// export default () => {}
+	// export default async function () {}
+	if (parent.isExportDefaultDeclaration()) {
+		return true;
+	}
+
+	return false;
+}
+
 function componentUsesTranslation(
 	bodyPath: NodePath<t.BlockStatement | t.Expression>,
 	hookIdentifier: string
@@ -48,19 +79,49 @@ function componentHasUseTranslationsHook(
 	return hasHook;
 }
 
-function injectI18nImport(ast: t.File): boolean {
+function componentHasGetTranslations(
+	bodyPath: NodePath<t.BlockStatement>,
+	hookIdentifier: string,
+	namespace: string
+): boolean {
+	let hasGetter = false;
+
+	bodyPath.traverse({
+		VariableDeclarator(path) {
+			const init = path.node.init;
+
+			if (
+				t.isIdentifier(path.node.id, { name: hookIdentifier }) &&
+				t.isAwaitExpression(init) &&
+				t.isCallExpression(init.argument) &&
+				t.isIdentifier(init.argument.callee, {
+					name: 'getTranslations',
+				}) &&
+				init.argument.arguments.length === 1 &&
+				t.isStringLiteral(init.argument.arguments[0], { value: namespace })
+			) {
+				hasGetter = true;
+				path.stop();
+			}
+		},
+	});
+
+	return hasGetter;
+}
+function injectI18nImport(ast: t.File, mode: 'sync' | 'async') {
+	const source = mode === 'async' ? 'next-intl/server' : 'next-intl';
+	const imported = mode === 'async' ? 'getTranslations' : 'useTranslations';
+
 	let hasImport = false;
 
-	// Check existing imports
 	traverse(ast, {
 		ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
 			if (
-				path.node.source.value === 'next-intl' &&
+				path.node.source.value === source &&
 				path.node.specifiers.some(
 					(s) =>
 						t.isImportSpecifier(s) &&
-						t.isIdentifier(s.imported) &&
-						s.imported.name === 'useTranslations'
+						t.isIdentifier(s.imported, { name: imported })
 				)
 			) {
 				hasImport = true;
@@ -69,16 +130,17 @@ function injectI18nImport(ast: t.File): boolean {
 	});
 
 	if (!hasImport) {
-		const importNode = parseStatement(
-			`import { useTranslations } from 'next-intl';`
+		ast.program.body.unshift(
+			parseStatement(`import { ${imported} } from '${source}';`)
 		);
-		ast.program.body.unshift(importNode);
 	}
-	return hasImport;
 }
 
 export {
 	componentUsesTranslation,
 	componentHasUseTranslationsHook,
 	injectI18nImport,
+	isReactComponentFunction,
+	isAsyncComponent,
+	componentHasGetTranslations,
 };
