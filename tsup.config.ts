@@ -14,7 +14,7 @@ export default defineConfig({
 		'src/apply-translations.ts',
 		'src/merge-messages.ts',
 		'src/load-generated-messages.ts',
-		'src/utils/translations.ts',
+		'src/utils/i18n-inejection.ts',
 	],
 	format: ['esm'],
 	clean: true,

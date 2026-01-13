@@ -1,5 +1,9 @@
-import { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
+import { parseStatement } from './misc.js';
+import traverseModule, { type NodePath } from '@babel/traverse';
+
+const traverse =
+	(traverseModule as any).default ?? (traverseModule as typeof traverseModule);
 
 function componentUsesTranslation(
 	bodyPath: NodePath<t.BlockStatement | t.Expression>,
@@ -44,4 +48,37 @@ function componentHasUseTranslationsHook(
 	return hasHook;
 }
 
-export { componentUsesTranslation, componentHasUseTranslationsHook };
+function injectI18nImport(ast: t.File): boolean {
+	let hasImport = false;
+
+	// Check existing imports
+	traverse(ast, {
+		ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
+			if (
+				path.node.source.value === 'next-intl' &&
+				path.node.specifiers.some(
+					(s) =>
+						t.isImportSpecifier(s) &&
+						t.isIdentifier(s.imported) &&
+						s.imported.name === 'useTranslations'
+				)
+			) {
+				hasImport = true;
+			}
+		},
+	});
+
+	if (!hasImport) {
+		const importNode = parseStatement(
+			`import { useTranslations } from 'next-intl';`
+		);
+		ast.program.body.unshift(importNode);
+	}
+	return hasImport;
+}
+
+export {
+	componentUsesTranslation,
+	componentHasUseTranslationsHook,
+	injectI18nImport,
+};

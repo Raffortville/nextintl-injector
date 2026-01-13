@@ -19,7 +19,8 @@ import chalk from 'chalk';
 import {
 	componentHasUseTranslationsHook,
 	componentUsesTranslation,
-} from './utils/translations.js';
+	injectI18nImport,
+} from './utils/i18n-inejection.js';
 
 const generate =
 	(generatorModule as any).default?.generate ??
@@ -32,36 +33,6 @@ export interface ApplyOptions {
 	dry: boolean;
 }
 let isDryMode = false;
-
-// ----------------- INJECT IMPORT STATEMENT -----------------
-function injectI18nImport(ast: t.File): boolean {
-	let hasImport = false;
-
-	// Check existing imports
-	traverse(ast, {
-		ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
-			if (
-				path.node.source.value === 'next-intl' &&
-				path.node.specifiers.some(
-					(s) =>
-						t.isImportSpecifier(s) &&
-						t.isIdentifier(s.imported) &&
-						s.imported.name === 'useTranslations'
-				)
-			) {
-				hasImport = true;
-			}
-		},
-	});
-
-	if (!hasImport) {
-		const importNode = parseStatement(
-			`import { useTranslations } from 'next-intl';`
-		);
-		ast.program.body.unshift(importNode);
-	}
-	return hasImport;
-}
 
 // ----------------- ENSURE USE TRANSLATIONS IS USED -----------------
 function ensureUseTranslation(ast: t.File, namespace: string): boolean {
