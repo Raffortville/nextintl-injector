@@ -35,7 +35,7 @@ class ConfigContext {
 
 	get(): I18nInjectorConfig {
 		if (!this.config) {
-			throw new Error('nextintl config file not loaded.');
+			throw new Error('nextintl-injector config file not loaded.');
 		}
 		return this.config;
 	}

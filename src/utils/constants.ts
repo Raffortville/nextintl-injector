@@ -1,4 +1,3 @@
-import path from 'path';
 import { RulesKey } from '../config.js';
 
 const SCRIPT_ROOT_DIR = 'nextintl-injector';
