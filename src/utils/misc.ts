@@ -40,9 +40,16 @@ function textKeyGenerator(text: string): string {
 
 	return `${start}__${end}`;
 }
-export type I18nValue = string | I18nObject;
+export type I18nLeaf = string;
+
 export interface I18nObject {
-	[key: string]: I18nValue;
+	[key: string]: I18nLeaf | I18nObject;
+}
+
+function isI18nObject(
+	value: I18nObject[string] | undefined
+): value is I18nObject {
+	return typeof value === 'object' && value !== null;
 }
 
 export const I18nSchema: z.ZodType<I18nObject> = z.lazy(() =>
@@ -73,4 +80,5 @@ export {
 	parseStatement,
 	textKeyGenerator,
 	validateI18n,
+	isI18nObject,
 };

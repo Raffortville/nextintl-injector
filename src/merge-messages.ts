@@ -1,9 +1,31 @@
 import { configContext } from './config.js';
 import path from 'path';
 import fs from 'fs';
-import { I18nObject, validateI18n } from './utils/misc.js';
+import { I18nObject, isI18nObject, validateI18n } from './utils/misc.js';
 import chalk from 'chalk';
 import { loadGeneratedMessages } from './load-generated-messages.js';
+
+// ----------------- DEEP MERGE I18N OBJECTS -----------------
+function mergeI18nObjects(base: I18nObject, incoming: I18nObject): I18nObject {
+	const result: I18nObject = { ...base };
+
+	for (const namespace of Object.keys(incoming)) {
+		const baseNs = base[namespace];
+		const incomingNs = incoming[namespace];
+
+		if (isI18nObject(baseNs) && isI18nObject(incomingNs)) {
+			result[namespace] = {
+				...baseNs,
+				...incomingNs,
+			};
+		} else {
+			// Fallback: overwrite (should be rare in i18n)
+			result[namespace] = incomingNs;
+		}
+	}
+
+	return result;
+}
 
 // ----------------- MERGE AND WRITE MESSAGES TO DEFAULT LOCALE FILE -----------------
 function mergeAndWriteMessages(defaultMessagesFile: string) {
@@ -16,12 +38,12 @@ function mergeAndWriteMessages(defaultMessagesFile: string) {
 		process.exit(1);
 	}
 
-	const generatedMessages = loadGeneratedMessages();
+	const newGeneratedMessages = loadGeneratedMessages();
 
-	const mergedMessages: I18nObject = {
-		...validatedExistingMessages,
-		...generatedMessages,
-	};
+	const mergedMessages: I18nObject = mergeI18nObjects(
+		validatedExistingMessages,
+		newGeneratedMessages
+	);
 
 	fs.writeFileSync(
 		defaultMessagesFile,
