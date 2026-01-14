@@ -26,9 +26,6 @@ importers:
       commander:
         specifier: ^14.0.2
         version: 14.0.2
-      nextintl-injector:
-        specifier: 'link:'
-        version: 'link:'
       prettier:
         specifier: ^3.7.4
         version: 3.7.4
