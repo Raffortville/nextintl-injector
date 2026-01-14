@@ -138,24 +138,35 @@ export async function initGenerateMessages() {
 
 		fs.mkdirSync(path.dirname(messagesOutputPath), { recursive: true });
 
+		const hasGenereatedMessages = Object.keys(generatedMessages).length > 0;
+		if (!hasGenereatedMessages) {
+			console.log(
+				chalk.yellowBright(
+					'No static texts were found for extraction in the project.'
+				)
+			);
+			return;
+		}
+
 		fs.writeFileSync(
 			messagesOutputPath,
 			JSON.stringify(generatedMessages, null, 2),
 			'utf-8'
 		);
 
-		console.log(
-			'✅ Generated messages written to',
-			`${chalk.underline.blueBright(messagesOutputPath)}`
-		);
-
 		const totalExtractions = Object.values(scan_extractions).reduce(
 			(sum, group) => sum + Object.keys(group).length,
 			0
 		);
+
 		console.log(
 			`${chalk.greenBright('✔')} Total texts extracted:`,
 			totalExtractions
+		);
+
+		console.log(
+			'✅ Generated messages written to',
+			`${chalk.underline.blueBright(messagesOutputPath)}`
 		);
 	} catch (error) {
 		console.error('❌ Error during message generation:', error);
