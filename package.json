@@ -1,6 +1,6 @@
 {
   "name": "nextintl-injector",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A static text extractor and injector for Next.js + next-intl.",
   "type": "module",
   "bin": {
